@@ -32,7 +32,6 @@ import org.keycloak.urls.UrlType
 import org.keycloak.utils.CredentialHelper
 import org.keycloak.utils.TotpUtils
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.kafka.core.KafkaTemplate
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
@@ -86,11 +85,11 @@ class UserManagementResource(private val session: KeycloakSession) : RealmResour
         val auth = ResourceAuthenticator.bearerAuth(session)
         if (!auth.hasScopeAccess("trust")) return ErrorHandler.forbidden()
 
-        runCatching {
-            validateCaptcha("${request.captchaAnswer}-${session.context.connection.remoteAddr}")
-        }.onFailure {
-            return ErrorHandler.response(Response.Status.BAD_REQUEST, OpexError.InvalidCaptcha)
-        }
+//        runCatching {
+//            validateCaptcha("${request.captchaAnswer}-${session.context.connection.remoteAddr}")
+//        }.onFailure {
+//            return ErrorHandler.response(Response.Status.BAD_REQUEST, OpexError.InvalidCaptcha)
+//        }
 
         if (!request.isValid())
             return ErrorHandler.response(Response.Status.BAD_REQUEST, OpexError.BadRequest)
@@ -130,7 +129,8 @@ class UserManagementResource(private val session: KeycloakSession) : RealmResour
             .updateCredential(opexRealm, user, UserCredentialModel.password(request.password, false))
 
         logger.info("User create response ${user.id}")
-        sendUserEvent(user)
+        //TODO get mobile from keycloak
+        sendUserEvent(user, request.mobileNumber)
 
         return Response.ok(RegisterUserResponse(user.id)).build()
     }
@@ -420,8 +420,8 @@ class UserManagementResource(private val session: KeycloakSession) : RealmResour
         }
     }
 
-    private fun sendUserEvent(user: UserModel) {
-        val kafkaEvent = UserCreatedEvent(user.id, user.firstName, user.lastName, user.email!!)
+    private fun sendUserEvent(user: UserModel, mobile: String?) {
+        val kafkaEvent = UserCreatedEvent(user.id, user.firstName, user.lastName, user.email, mobile)
         kafkaTemplate.send("auth_user_created", kafkaEvent)
         logger.info("$kafkaEvent produced in kafka topic")
     }

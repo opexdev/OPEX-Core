@@ -28,7 +28,8 @@ class ExtendedEventListenerProvider(private val session: KeycloakSession) : Even
         val emailVerified: Boolean,
         val firstName: String?,
         val lastName: String?,
-        val email: String
+        val email: String?,
+        val mobileNumber: String?
     )
 
     data class UserUuidDto(val type: String, val uuid: String, val email: String)
@@ -77,7 +78,7 @@ class ExtendedEventListenerProvider(private val session: KeycloakSession) : Even
             logger.info("A new user has been created")
             val userData = objectMapper.readValue(adminEvent.representation, UserData::class.java)
             val uuid = adminEvent.resourcePath.substringAfter("/")
-            val kafkaEvent = UserCreatedEvent(uuid, userData.firstName, userData.lastName, userData.email)
+            val kafkaEvent = UserCreatedEvent(uuid, userData.firstName, userData.lastName, userData.email , userData.mobileNumber)
             (ApplicationContextHolder.getCurrentContext()!!
                 .getBean("authKafkaTemplate") as KafkaTemplate<String, AuthEvent>)
                 .send("auth_user_created", kafkaEvent)
